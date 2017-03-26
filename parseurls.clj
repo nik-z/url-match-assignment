@@ -26,7 +26,6 @@
       (extractparts "queryparam" pattern)]
 )
 
-
 (defn extractbinds 
   "Extract binds from the given string"
   [part] 
@@ -36,6 +35,10 @@
     "Extract the name from the queryparam (a string like 'paramname=?parambind')"
     [part] 
     (nth (re-find #"^(\w+)=" part) 1) )
+
+    
+;; Parse URL, bind values
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn binds-to-regex 
     "Build a regular expression for the given binds.
@@ -98,13 +101,6 @@
         hostpathbinded (map vector (map keyword hostpathbinds) hostpathbindvalues)
         ]
 
-        (println "host binds: " hostbinds)
-        (println "path binds: " pathbinds)
-        (println "host+path binds: " hostpathbinds)
-        (println "Host+path pattern: " hostpathpattern)
-        (println "Host+path bind values: " hostpathbindvalues)
-        (println "Host+path parsed and binded: " hostpathbinded)
-
         [(some? hostpathfound) hostpathbinded]
     )
 )
@@ -118,10 +114,6 @@
 	  qpbinded (parse-qps url qpnames qpbinds)
 	  qpmatches (every? some? (map #(second %) qpbinded) )
     ]
-	  (println "queryparam binds: " qpbinds)
-	  (println "queryparam names: " qpnames)
-	  (println "Queryparams parsed and binded: " qpbinded)
-	  
 	  [qpmatches qpbinded]
   )
 )
@@ -130,22 +122,12 @@
   APattern
   (recognize [this, url] 
 
-  (println)
-  (println "pattern: " pattern)
-  (println "URL: " url)
-  (println "---")
-
 	(let [
 	  [host path queryparam] (parse-pattern pattern)
 	  [hostpathmatches hostpathbinded] (recognize-hostpath url host path)
 	  [qpmatches qpbinded] (recognize-qp url queryparam)
 	  ]
     
-        (println "host: " host)
-        (println "path: " path)
-        (println "queryparam: " queryparam)
-        (println "hostpathbinded" hostpathbinded)
-        
       (if (and hostpathmatches qpmatches)
         (concat hostpathbinded qpbinded)
       )
@@ -161,7 +143,7 @@
 
 (def dribbble (Pattern. "host(dribbble.com); path(shots/?id); queryparam(offset=?offset); queryparam(list=?type);"))
   
-(def livejournal (Pattern. "host(?username.twitter.com); path(?post.html);"))
+(def livejournal (Pattern. "host(?username.livejournal.com); path(?postid.html);"))
 
 
 (deftest tests
@@ -196,9 +178,14 @@
             "https://dribbble.com/shots/1905065-Travel-Icons-pack?list=users"
         )
     ))
-    
 
-
+    (is (= 
+        [[:username "nextbigfuture"] [:postid "4421103"]] 
+        (recognize 
+            livejournal
+            "http://nextbigfuture.livejournal.com/4421103.html"
+        ) 
+    ))
 )
 
 (run-tests)
